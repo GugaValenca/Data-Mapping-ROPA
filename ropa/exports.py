@@ -7,10 +7,11 @@ passes an unfiltered queryset for the latter.
 """
 
 import csv
-from datetime import datetime
+from xml.sax.saxutils import escape as xml_escape
 
 from django.conf import settings
 from django.http import HttpResponse
+from django.utils import timezone
 
 from .models import ProcessingActivity
 
@@ -51,12 +52,12 @@ def _row_for(activity: ProcessingActivity) -> list[str]:
 
 def export_csv(activities) -> HttpResponse:
     response = HttpResponse(content_type="text/csv")
-    timestamp = datetime.now().strftime("%Y%m%d")
+    timestamp = timezone.now().strftime("%Y%m%d")
     response["Content-Disposition"] = f'attachment; filename="{EXPORT_BASENAME}-{timestamp}.csv"'
 
     writer = csv.writer(response)
     writer.writerow([f"{settings.SITE_TITLE} — Record of Processing Activities"])
-    writer.writerow([f"Generated {datetime.now().strftime('%Y-%m-%d %H:%M')}"])
+    writer.writerow([f"Generated {timezone.now().strftime('%Y-%m-%d %H:%M')}"])
     writer.writerow([])
     writer.writerow(COLUMN_HEADERS)
     for activity in activities:
@@ -81,8 +82,9 @@ def export_pdf(activities) -> HttpResponse:
         TableStyle,
     )
 
+    generated_at = timezone.now()
     response = HttpResponse(content_type="application/pdf")
-    timestamp = datetime.now().strftime("%Y%m%d")
+    timestamp = generated_at.strftime("%Y%m%d")
     response["Content-Disposition"] = f'attachment; filename="{EXPORT_BASENAME}-{timestamp}.pdf"'
 
     doc = SimpleDocTemplate(
@@ -98,30 +100,37 @@ def export_pdf(activities) -> HttpResponse:
     styles = getSampleStyleSheet()
     title_style = styles["Title"]
     meta_style = styles["Normal"]
-    cell_style = ParagraphStyle(
-        "cell", parent=styles["Normal"], fontSize=7.5, leading=9.5
-    )
+    cell_style = ParagraphStyle("cell", parent=styles["Normal"], fontSize=7.5, leading=9.5)
     risk_cell_style = ParagraphStyle(
-        "riskCell", parent=cell_style, textColor=colors.HexColor("#B3261E"),
+        "riskCell", parent=cell_style, textColor=colors.HexColor("#B3261E")
     )
 
     elements = [
         Paragraph(f"{settings.SITE_TITLE}", title_style),
         Paragraph("Record of Processing Activities (ROPA)", styles["Heading2"]),
         Paragraph(
-            f"Generated {datetime.now().strftime('%Y-%m-%d %H:%M')} &mdash; "
+            f"Generated {generated_at.strftime('%Y-%m-%d %H:%M')} &mdash; "
             f"{len(activities)} activit{'y' if len(activities) == 1 else 'ies'} included",
             meta_style,
         ),
         Spacer(1, 0.15 * inch),
     ]
 
+    # reportlab's Paragraph parses its text as a small XML-like markup
+    # language (it's how <b>...</b> below produces bold headers), so any
+    # value that isn't hardcoded markup we wrote ourselves has to be
+    # escaped first — otherwise a stray "<" or "&" in a free-text field
+    # (activity name, purpose, retention justification, all editable in
+    # admin) gets silently swallowed or reinterpreted as a tag instead of
+    # showing up in the exported document.
     header_row = [Paragraph(f"<b>{h}</b>", cell_style) for h in COLUMN_HEADERS]
     table_data = [header_row]
     row_is_high_risk = []
     for activity in activities:
         style = risk_cell_style if activity.is_high_risk else cell_style
-        table_data.append([Paragraph(str(value), style) for value in _row_for(activity)])
+        table_data.append(
+            [Paragraph(xml_escape(str(value)), style) for value in _row_for(activity)]
+        )
         row_is_high_risk.append(activity.is_high_risk)
 
     # Landscape letter minus margins leaves 10.2" of printable width
@@ -129,8 +138,17 @@ def export_pdf(activities) -> HttpResponse:
     # including the first and last, stays fully inside the page instead
     # of being clipped at the edges.
     col_widths = [
-        1.0 * inch, 0.8 * inch, 1.3 * inch, 1.15 * inch, 0.5 * inch,
-        0.85 * inch, 1.15 * inch, 0.5 * inch, 1.0 * inch, 1.3 * inch, 0.55 * inch,
+        1.0 * inch,
+        0.8 * inch,
+        1.3 * inch,
+        1.15 * inch,
+        0.5 * inch,
+        0.85 * inch,
+        1.15 * inch,
+        0.5 * inch,
+        1.0 * inch,
+        1.3 * inch,
+        0.55 * inch,
     ]
 
     table = Table(table_data, colWidths=col_widths, repeatRows=1)
@@ -143,7 +161,9 @@ def export_pdf(activities) -> HttpResponse:
     ]
     for idx, is_high_risk in enumerate(row_is_high_risk, start=1):
         if is_high_risk:
-            table_style_commands.append(("BACKGROUND", (0, idx), (-1, idx), colors.HexColor("#FBE9E7")))
+            table_style_commands.append(
+                ("BACKGROUND", (0, idx), (-1, idx), colors.HexColor("#FBE9E7"))
+            )
     table.setStyle(TableStyle(table_style_commands))
     elements.append(table)
 

@@ -11,6 +11,7 @@ import io
 
 from django.test import Client, TestCase
 from django.urls import reverse
+from pypdf import PdfReader
 
 from .models import (
     DataCategory,
@@ -222,3 +223,16 @@ class ExportTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/pdf")
         self.assertTrue(response.content.startswith(b"%PDF"))
+
+    def test_pdf_export_preserves_markup_characters_in_free_text(self):
+        # reportlab's Paragraph interprets its input as a small XML-like
+        # markup language; unescaped "<...>" in a free-text field used to
+        # be silently swallowed instead of appearing in the document.
+        make_activity(name="Contains <tag> & an ampersand")
+        response = self.client.get(reverse("ropa:export_pdf"))
+        text = "".join(page.extract_text() for page in PdfReader(io.BytesIO(response.content)).pages)
+        # Narrow columns wrap onto multiple lines, so compare with
+        # whitespace collapsed rather than requiring one unbroken line —
+        # what matters is that no character got dropped or reinterpreted.
+        normalized = " ".join(text.split())
+        self.assertIn("Contains <tag> & an ampersand", normalized)
