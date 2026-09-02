@@ -156,6 +156,16 @@ class DashboardFilterTests(TestCase):
         self.assertEqual(len(activities), 1)
         self.assertEqual(activities[0], self.activity_b)
 
+    def test_non_numeric_data_category_is_ignored_not_a_server_error(self):
+        response = self.client.get(reverse("ropa:dashboard"), {"data_category": "abc"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["activities"]), 2)
+
+    def test_non_numeric_legal_basis_is_ignored_not_a_server_error(self):
+        response = self.client.get(reverse("ropa:dashboard"), {"legal_basis": "abc"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["activities"]), 2)
+
     def test_filter_by_international_transfer_yes(self):
         response = self.client.get(reverse("ropa:dashboard"), {"international": "yes"})
         activities = response.context["activities"]
