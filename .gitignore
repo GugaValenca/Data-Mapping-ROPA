@@ -10,3 +10,9 @@ env/
 staticfiles/
 
 .vercel
+
+# Lint/type-check/coverage tool caches
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
