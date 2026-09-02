@@ -12,6 +12,8 @@ records; the ROPA itself, its filtered views, and its PDF/CSV exports are
 generated from that data on demand, instead of being assembled by hand in
 a spreadsheet or Word document that goes stale the moment it's saved.
 
+![Dashboard: a filterable table of processing activities, two flagged high-risk in red, with PDF/CSV export buttons](docs/dashboard.png)
+
 ## The problem it solves
 
 Most ROPAs are static documents: built once for an audit, maintained
