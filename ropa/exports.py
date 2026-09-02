@@ -53,7 +53,9 @@ def _row_for(activity: ProcessingActivity) -> list[str]:
 def export_csv(activities) -> HttpResponse:
     response = HttpResponse(content_type="text/csv")
     timestamp = timezone.now().strftime("%Y%m%d")
-    response["Content-Disposition"] = f'attachment; filename="{EXPORT_BASENAME}-{timestamp}.csv"'
+    response["Content-Disposition"] = (
+        f'attachment; filename="{EXPORT_BASENAME}-{timestamp}.csv"'
+    )
 
     writer = csv.writer(response)
     writer.writerow([f"{settings.SITE_TITLE} — Record of Processing Activities"])
@@ -85,7 +87,9 @@ def export_pdf(activities) -> HttpResponse:
     generated_at = timezone.now()
     response = HttpResponse(content_type="application/pdf")
     timestamp = generated_at.strftime("%Y%m%d")
-    response["Content-Disposition"] = f'attachment; filename="{EXPORT_BASENAME}-{timestamp}.pdf"'
+    response["Content-Disposition"] = (
+        f'attachment; filename="{EXPORT_BASENAME}-{timestamp}.pdf"'
+    )
 
     doc = SimpleDocTemplate(
         response,
@@ -173,7 +177,9 @@ def export_pdf(activities) -> HttpResponse:
             "Sample data belongs to a fictional company, for demonstration "
             "purposes. Retention periods shown are illustrative placeholders "
             "pending legal verification, not confirmed legal requirements.",
-            ParagraphStyle("footnote", parent=styles["Normal"], fontSize=7, textColor=colors.grey),
+            ParagraphStyle(
+                "footnote", parent=styles["Normal"], fontSize=7, textColor=colors.grey
+            ),
         )
     )
 

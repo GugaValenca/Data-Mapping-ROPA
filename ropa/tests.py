@@ -62,9 +62,7 @@ class RiskFlagTests(TestCase):
         self.assertEqual(len(activity.risk_reasons), 2)
 
     def test_sensitive_data_missing_legal_basis_only_is_high_risk(self):
-        activity = make_activity(
-            categories=[self.sensitive], retention_period=self.retention
-        )
+        activity = make_activity(categories=[self.sensitive], retention_period=self.retention)
         self.assertTrue(activity.is_high_risk)
         self.assertEqual(len(activity.risk_reasons), 1)
 
@@ -95,13 +93,19 @@ class RiskFlagTests(TestCase):
 
 class InternationalTransferTests(TestCase):
     def test_flagged_when_any_recipient_is_international(self):
-        domestic = DataRecipient.objects.create(name="Local Team", is_international_transfer=False)
-        overseas = DataRecipient.objects.create(name="Overseas Vendor", is_international_transfer=True)
+        domestic = DataRecipient.objects.create(
+            name="Local Team", is_international_transfer=False
+        )
+        overseas = DataRecipient.objects.create(
+            name="Overseas Vendor", is_international_transfer=True
+        )
         activity = make_activity(recipients=[domestic, overseas])
         self.assertTrue(activity.involves_international_transfer)
 
     def test_not_flagged_when_no_recipient_is_international(self):
-        domestic = DataRecipient.objects.create(name="Local Team", is_international_transfer=False)
+        domestic = DataRecipient.objects.create(
+            name="Local Team", is_international_transfer=False
+        )
         activity = make_activity(recipients=[domestic])
         self.assertFalse(activity.involves_international_transfer)
 
@@ -120,8 +124,12 @@ class DashboardFilterTests(TestCase):
         self.category_b = DataCategory.objects.create(name="Category B")
         self.basis_consent = LegalBasis.objects.create(name="Consent")
         self.basis_contract = LegalBasis.objects.create(name="Contract Necessity")
-        self.domestic = DataRecipient.objects.create(name="Domestic Team", is_international_transfer=False)
-        self.overseas = DataRecipient.objects.create(name="Overseas Vendor", is_international_transfer=True)
+        self.domestic = DataRecipient.objects.create(
+            name="Domestic Team", is_international_transfer=False
+        )
+        self.overseas = DataRecipient.objects.create(
+            name="Overseas Vendor", is_international_transfer=True
+        )
 
         self.activity_a = make_activity(
             name="Alpha Activity",
@@ -205,7 +213,7 @@ class ExportTests(TestCase):
         rows = list(csv.reader(io.StringIO(content)))
         # Header row of the table lives after the title/date lines.
         header_row = next(r for r in rows if r and r[0] == "Activity")
-        data_rows = rows[rows.index(header_row) + 1:]
+        data_rows = rows[rows.index(header_row) + 1 :]
         self.assertTrue(any(row and row[0] == "Exported Activity" for row in data_rows))
 
     def test_csv_export_respects_filters(self):
@@ -230,7 +238,9 @@ class ExportTests(TestCase):
         # be silently swallowed instead of appearing in the document.
         make_activity(name="Contains <tag> & an ampersand")
         response = self.client.get(reverse("ropa:export_pdf"))
-        text = "".join(page.extract_text() for page in PdfReader(io.BytesIO(response.content)).pages)
+        text = "".join(
+            page.extract_text() for page in PdfReader(io.BytesIO(response.content)).pages
+        )
         # Narrow columns wrap onto multiple lines, so compare with
         # whitespace collapsed rather than requiring one unbroken line —
         # what matters is that no character got dropped or reinterpreted.

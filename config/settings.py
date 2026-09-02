@@ -47,17 +47,21 @@ ALLOWED_HOSTS = [
 # DJANGO_ALLOWED_HOSTS — trust both automatically when present. A custom
 # domain still needs to be added via DJANGO_ALLOWED_HOSTS.
 _vercel_hosts = [
-    h for h in (
+    h
+    for h in (
         os.environ.get("VERCEL_URL"),
         os.environ.get("VERCEL_PROJECT_PRODUCTION_URL"),
-    ) if h
+    )
+    if h
 ]
 if _vercel_hosts:
     ALLOWED_HOSTS.extend(_vercel_hosts)
     CSRF_TRUSTED_ORIGINS = [f"https://{h}" for h in _vercel_hosts]
 else:
     CSRF_TRUSTED_ORIGINS = [
-        o.strip() for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
+        o.strip()
+        for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
+        if o.strip()
     ]
 
 # Vercel (like most serverless/PaaS hosts) terminates TLS at the edge and

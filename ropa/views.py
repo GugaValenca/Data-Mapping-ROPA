@@ -29,9 +29,7 @@ class DashboardFilters:
 
     @property
     def is_active(self) -> bool:
-        return bool(
-            self.category_id or self.legal_basis_id or self.international or self.query
-        )
+        return bool(self.category_id or self.legal_basis_id or self.international or self.query)
 
 
 def _parse_filters(request: HttpRequest) -> DashboardFilters:

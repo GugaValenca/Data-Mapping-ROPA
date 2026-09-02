@@ -48,7 +48,7 @@ class DataCategory(models.Model):
 
     class Meta:
         verbose_name_plural = "Data categories"
-        ordering = ["name"]
+        ordering = ("name",)
 
     def __str__(self):
         return self.name
@@ -63,7 +63,7 @@ class LegalBasis(models.Model):
 
     class Meta:
         verbose_name_plural = "Legal bases"
-        ordering = ["name"]
+        ordering = ("name",)
 
     def __str__(self):
         return self.name
@@ -92,7 +92,7 @@ class DataRecipient(models.Model):
     notes = models.TextField(blank=True)
 
     class Meta:
-        ordering = ["name"]
+        ordering = ("name",)
 
     def __str__(self):
         label = dict(self.RecipientType.choices).get(self.recipient_type, "")
@@ -116,12 +116,10 @@ class RetentionPeriod(models.Model):
         max_length=150,
         help_text='Human-readable duration, e.g. "24 months after account closure".',
     )
-    justification = models.TextField(
-        help_text="Business rationale for this retention period."
-    )
+    justification = models.TextField(help_text="Business rationale for this retention period.")
 
     class Meta:
-        ordering = ["duration_label"]
+        ordering = ("duration_label",)
 
     def __str__(self):
         return self.duration_label
@@ -151,9 +149,7 @@ class ProcessingActivity(models.Model):
         on_delete=models.SET_NULL,
         related_name="activities",
     )
-    recipients = models.ManyToManyField(
-        DataRecipient, related_name="activities", blank=True
-    )
+    recipients = models.ManyToManyField(DataRecipient, related_name="activities", blank=True)
     retention_period = models.ForeignKey(
         RetentionPeriod,
         null=True,
@@ -167,7 +163,7 @@ class ProcessingActivity(models.Model):
 
     class Meta:
         verbose_name_plural = "Processing activities"
-        ordering = ["name"]
+        ordering = ("name",)
 
     def __str__(self):
         return self.name

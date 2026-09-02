@@ -124,9 +124,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "justification",
-                    models.TextField(
-                        help_text="Business rationale for this retention period."
-                    ),
+                    models.TextField(help_text="Business rationale for this retention period."),
                 ),
             ],
             options={
@@ -153,9 +151,7 @@ class Migration(migrations.Migration):
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 (
                     "data_categories",
-                    models.ManyToManyField(
-                        related_name="activities", to="ropa.datacategory"
-                    ),
+                    models.ManyToManyField(related_name="activities", to="ropa.datacategory"),
                 ),
                 (
                     "legal_basis",

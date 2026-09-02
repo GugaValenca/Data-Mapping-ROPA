@@ -18,9 +18,7 @@ admin.site.index_title = "Manage processing activities & reference data"
 # Wraps the existing admin site's bound login method directly (rather
 # than swapping in a new AdminSite instance) so every @admin.register()
 # call above keeps registering against the same site that urls.py serves.
-admin.site.login = ratelimit(key="ip", rate="5/m", method="POST", block=True)(
-    admin.site.login
-)
+admin.site.login = ratelimit(key="ip", rate="5/m", method="POST", block=True)(admin.site.login)
 
 
 @admin.register(DataCategory)
