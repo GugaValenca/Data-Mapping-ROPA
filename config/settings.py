@@ -40,14 +40,21 @@ ALLOWED_HOSTS = [
     h.strip() for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if h.strip()
 ]
 
-# Vercel sets VERCEL_URL to the deployment's own *.vercel.app hostname at
-# runtime (it's not known in advance, so it can't just go in
-# DJANGO_ALLOWED_HOSTS). Trust it automatically when present; a custom
+# Vercel sets these at runtime — VERCEL_URL to the *current deployment's*
+# unique hostname (a new one every deploy), VERCEL_PROJECT_PRODUCTION_URL
+# to the stable production alias (e.g. data-mapping-ropa.vercel.app).
+# Neither is known in advance, so they can't just go in
+# DJANGO_ALLOWED_HOSTS — trust both automatically when present. A custom
 # domain still needs to be added via DJANGO_ALLOWED_HOSTS.
-_vercel_url = os.environ.get("VERCEL_URL")
-if _vercel_url:
-    ALLOWED_HOSTS.append(_vercel_url)
-    CSRF_TRUSTED_ORIGINS = [f"https://{_vercel_url}"]
+_vercel_hosts = [
+    h for h in (
+        os.environ.get("VERCEL_URL"),
+        os.environ.get("VERCEL_PROJECT_PRODUCTION_URL"),
+    ) if h
+]
+if _vercel_hosts:
+    ALLOWED_HOSTS.extend(_vercel_hosts)
+    CSRF_TRUSTED_ORIGINS = [f"https://{h}" for h in _vercel_hosts]
 else:
     CSRF_TRUSTED_ORIGINS = [
         o.strip() for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
@@ -57,7 +64,7 @@ else:
 # forwards requests to the app over plain HTTP with this header set —
 # without it Django can't tell the request was actually HTTPS, which
 # breaks CSRF and secure-cookie checks.
-if _vercel_url:
+if os.environ.get("VERCEL"):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
