@@ -61,6 +61,11 @@ of found during a review.
 - **Configuration**: `SECRET_KEY` / `DEBUG` / `ALLOWED_HOSTS` read from
   environment variables with dev-only fallbacks (`config/settings.py`,
   `.env.example`) — the codebase is deploy-ready without code changes
+- **Deployment**: [Vercel](https://vercel.com) (Python/WSGI runtime),
+  Postgres in production via `dj-database-url` (SQLite locally, no
+  config needed), static files served by
+  [WhiteNoise](https://whitenoise.readthedocs.io/) — see **Deployment**
+  below
 
 ## Data privacy & compliance design
 
@@ -140,6 +145,8 @@ endpoints producing well-formed, filter-respecting CSV/PDF output.
 ## Project structure
 
 ```
+api/index.py                   WSGI entrypoint Vercel's Python runtime routes into
+vercel.json                     Vercel build/route config
 config/                        Django project settings & root URLs
 ropa/                           The ROPA app
   models.py                     DataCategory, LegalBasis, DataRecipient,
@@ -168,12 +175,43 @@ static/                          CSS and JS
   `ropa/management/commands/seed_ropa.py`, not in the database file, so
   nothing sensitive is at risk of being committed.
 
-## Deployment
+## Deployment (Vercel)
 
-Not yet configured. This app is a good fit for a free-tier Django host
-such as **Render** or **PythonAnywhere** (swap SQLite for Render's free
-Postgres if using Render) — no code changes required, just setting the
-environment variables above on the host.
+The app is set up to deploy on Vercel's Python runtime — `vercel.json` +
+`api/index.py` route every request into the Django WSGI app, and
+`config/settings.py` switches from SQLite to Postgres automatically
+whenever a `DATABASE_URL`/`POSTGRES_URL` is present, with no code
+changes needed between the two. Vercel's serverless functions have no
+persistent disk, which is the one thing that actually forces a change
+from local dev: SQLite's on-disk file wouldn't survive between requests
+there, so production needs a real Postgres database.
+
+1. **Connect the repo**: in the Vercel dashboard, *Add New… → Project*,
+   import `GugaValenca/Data-Mapping-ROPA` from GitHub.
+2. **Add a Postgres database**: Project → *Storage* tab → *Create
+   Database* → Postgres (this provisions a Neon-backed instance and
+   injects `POSTGRES_URL` into the project's environment variables
+   automatically — nothing to copy by hand).
+3. **Set the remaining environment variables** (Project → *Settings →
+   Environment Variables*):
+   - `DJANGO_SECRET_KEY` — a freshly generated one (see `.env.example`
+     for the one-liner that generates it)
+   - `DJANGO_DEBUG` — `False`
+   - `DJANGO_ALLOWED_HOSTS` — only needed for a custom domain; the
+     `*.vercel.app` preview/production URL is trusted automatically
+4. **Run migrations against the production database** (one-time, and
+   again after any future model change — Vercel's build step doesn't run
+   this for you):
+   ```bash
+   DATABASE_URL="<value from Vercel's Storage tab>" python manage.py migrate
+   DATABASE_URL="<same value>" python manage.py seed_ropa   # optional, sample data
+   DATABASE_URL="<same value>" python manage.py createsuperuser
+   ```
+5. **Deploy**: `vercel --prod`, or push to the connected branch.
+
+Verified locally end-to-end against a real Postgres 16 instance
+(migrations, seed data, dashboard, filters, admin, and both exports)
+before being written up here — not just against the code reading right.
 
 ## About the author
 

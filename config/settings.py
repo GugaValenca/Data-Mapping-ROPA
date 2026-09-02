@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 import os
 from pathlib import Path
 
+import dj_database_url
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -23,9 +25,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 # Read from the environment so a real key never has to live in source
 # control. The fallback below is a throwaway value, valid for local
-# development only — every deployment target (Render, PythonAnywhere,
-# etc.) should set DJANGO_SECRET_KEY as an actual environment variable
-# with its own generated key. See .env.example.
+# development only — any real deployment (Vercel included) should set
+# DJANGO_SECRET_KEY as an actual environment variable with its own
+# generated key. See .env.example.
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY",
     "django-insecure-dev-only-4-p4+^k0b@75n1d4w3=%_(tcmw(lr&qam4vrhk83%a!i8l",
@@ -37,6 +39,26 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "True") == "True"
 ALLOWED_HOSTS = [
     h.strip() for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if h.strip()
 ]
+
+# Vercel sets VERCEL_URL to the deployment's own *.vercel.app hostname at
+# runtime (it's not known in advance, so it can't just go in
+# DJANGO_ALLOWED_HOSTS). Trust it automatically when present; a custom
+# domain still needs to be added via DJANGO_ALLOWED_HOSTS.
+_vercel_url = os.environ.get("VERCEL_URL")
+if _vercel_url:
+    ALLOWED_HOSTS.append(_vercel_url)
+    CSRF_TRUSTED_ORIGINS = [f"https://{_vercel_url}"]
+else:
+    CSRF_TRUSTED_ORIGINS = [
+        o.strip() for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
+    ]
+
+# Vercel (like most serverless/PaaS hosts) terminates TLS at the edge and
+# forwards requests to the app over plain HTTP with this header set —
+# without it Django can't tell the request was actually HTTPS, which
+# breaks CSRF and secure-cookie checks.
+if _vercel_url:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 # Application definition
@@ -53,6 +75,13 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Serves static files directly from the app process. Vercel's
+    # serverless functions have no separate static file server and no
+    # persistent disk to run `collectstatic` into ahead of time, so
+    # WhiteNoise (with WHITENOISE_USE_FINDERS below) serves them straight
+    # from the source directories on every request — simplest thing that
+    # works for this app's tiny CSS/JS footprint.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -84,12 +113,22 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+# SQLite locally (zero setup, matches the README's local-dev instructions).
+# In production — Vercel's serverless functions have no persistent disk,
+# so a SQLite file wouldn't survive between requests — set DATABASE_URL
+# (Vercel's Postgres/Neon integration injects POSTGRES_URL automatically;
+# either name is read here) to switch to Postgres with no code changes.
+_database_url = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
+
+if _database_url:
+    DATABASES = {"default": dj_database_url.parse(_database_url, conn_max_age=600)}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
     }
-}
 
 
 # Password validation
@@ -128,6 +167,16 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
+# Serve straight from STATICFILES_DIRS instead of requiring a collectstatic
+# build step — there's no Vercel build hook wired up to run one, and this
+# app's static payload is one CSS file and one JS file, so the (real, but
+# here irrelevant) performance cost of skipping the manifest/hashing is a
+# non-issue.
+WHITENOISE_USE_FINDERS = True
 
 # Site-wide display name, used in the base template <title> and ROPA export
 # filenames. Kept as a setting rather than hard-coded so it only needs to
