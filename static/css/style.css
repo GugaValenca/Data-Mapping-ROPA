@@ -5,7 +5,10 @@
     --text: #1a1f2b;
     --text-muted: #5b6472;
     --brand: #1f2a44;
-    --brand-accent: #2f6fed;
+    /* 5.21:1 against --bg as text, 5.63:1 as white-on-button — both
+       comfortably clear the 4.5:1 WCAG AA threshold for normal-size
+       text. The original #2f6fed measured 4.21:1 as link/body text. */
+    --brand-accent: #2760d6;
     --risk-bg: #fbe9e7;
     --risk-text: #b3261e;
     --risk-border: #f2c4be;
