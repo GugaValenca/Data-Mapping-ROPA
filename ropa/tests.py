@@ -9,10 +9,12 @@ actually producing well-formed CSV/PDF output.
 import csv
 import io
 
+from django.contrib import admin
 from django.test import Client, TestCase
 from django.urls import reverse
 from pypdf import PdfReader
 
+from .admin import ProcessingActivityAdmin
 from .models import (
     DataCategory,
     DataRecipient,
@@ -198,6 +200,13 @@ class DashboardFilterTests(TestCase):
         self.assertEqual(len(response.context["activities"]), 0)
 
 
+class AboutViewTests(TestCase):
+    def test_about_page_loads(self):
+        response = self.client.get(reverse("ropa:about"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "ropa/about.html")
+
+
 class ExportTests(TestCase):
     def setUp(self):
         self.client = Client()
@@ -246,3 +255,65 @@ class ExportTests(TestCase):
         # what matters is that no character got dropped or reinterpreted.
         normalized = " ".join(text.split())
         self.assertIn("Contains <tag> & an ampersand", normalized)
+
+
+class ModelStringRepresentationTests(TestCase):
+    def test_data_category_str_is_name(self):
+        category = DataCategory.objects.create(name="Payment Card Data")
+        self.assertEqual(str(category), "Payment Card Data")
+
+    def test_legal_basis_str_is_name(self):
+        basis = LegalBasis.objects.create(name="Consent")
+        self.assertEqual(str(basis), "Consent")
+
+    def test_data_recipient_str_includes_type_label(self):
+        internal = DataRecipient.objects.create(
+            name="Finance Department", recipient_type=DataRecipient.RecipientType.INTERNAL
+        )
+        third_party = DataRecipient.objects.create(
+            name="Payment Gateway", recipient_type=DataRecipient.RecipientType.THIRD_PARTY
+        )
+        self.assertEqual(str(internal), "Finance Department (Internal team)")
+        self.assertEqual(str(third_party), "Payment Gateway (Third party / vendor)")
+
+    def test_retention_period_str_is_duration_label(self):
+        retention = RetentionPeriod.objects.create(
+            duration_label="7 years", justification="Test."
+        )
+        self.assertEqual(str(retention), "7 years")
+
+    def test_processing_activity_str_is_name(self):
+        activity = make_activity(name="Customer Support Tickets")
+        self.assertEqual(str(activity), "Customer Support Tickets")
+
+
+class AdminDisplayMethodTests(TestCase):
+    """The three boolean list_display methods on ProcessingActivityAdmin
+    just proxy the model properties of the same name (tested directly in
+    RiskFlagTests/InternationalTransferTests) - these confirm the admin
+    wiring itself calls through correctly."""
+
+    def setUp(self):
+        self.model_admin = ProcessingActivityAdmin(ProcessingActivity, admin.site)
+
+    def test_display_methods_reflect_high_risk_activity(self):
+        sensitive = DataCategory.objects.create(name="Health Data", is_sensitive=True)
+        overseas = DataRecipient.objects.create(
+            name="Overseas Vendor", is_international_transfer=True
+        )
+        activity = make_activity(categories=[sensitive], recipients=[overseas])
+
+        self.assertTrue(self.model_admin.involves_sensitive_data(activity))
+        self.assertTrue(self.model_admin.involves_international_transfer(activity))
+        self.assertTrue(self.model_admin.is_high_risk(activity))
+
+    def test_display_methods_reflect_ordinary_activity(self):
+        ordinary = DataCategory.objects.create(name="Contact Info", is_sensitive=False)
+        domestic = DataRecipient.objects.create(
+            name="Local Team", is_international_transfer=False
+        )
+        activity = make_activity(categories=[ordinary], recipients=[domestic])
+
+        self.assertFalse(self.model_admin.involves_sensitive_data(activity))
+        self.assertFalse(self.model_admin.involves_international_transfer(activity))
+        self.assertFalse(self.model_admin.is_high_risk(activity))
