@@ -91,8 +91,11 @@ def export_pdf(activities) -> HttpResponse:
         f'attachment; filename="{EXPORT_BASENAME}-{timestamp}.pdf"'
     )
 
+    # HttpResponse implements the file-like .write() SimpleDocTemplate
+    # actually needs; reportlab's stub just declares the parameter as
+    # str | IO[bytes] and doesn't know about it structurally.
     doc = SimpleDocTemplate(
-        response,
+        response,  # type: ignore[arg-type]
         pagesize=landscape(letter),
         leftMargin=0.4 * inch,
         rightMargin=0.4 * inch,
@@ -168,7 +171,11 @@ def export_pdf(activities) -> HttpResponse:
             table_style_commands.append(
                 ("BACKGROUND", (0, idx), (-1, idx), colors.HexColor("#FBE9E7"))
             )
-    table.setStyle(TableStyle(table_style_commands))
+    # reportlab's TableStyle stub models each command tuple far more
+    # rigidly than the library actually accepts at runtime (it's a
+    # deliberately loose, variadic instruction format) - verified this
+    # renders correctly, both locally and against production.
+    table.setStyle(TableStyle(table_style_commands))  # type: ignore[arg-type]
     elements.append(table)
 
     elements.append(Spacer(1, 0.2 * inch))

@@ -50,7 +50,7 @@ class DataCategory(models.Model):
         verbose_name_plural = "Data categories"
         ordering = ("name",)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 
@@ -65,7 +65,7 @@ class LegalBasis(models.Model):
         verbose_name_plural = "Legal bases"
         ordering = ("name",)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 
@@ -94,7 +94,7 @@ class DataRecipient(models.Model):
     class Meta:
         ordering = ("name",)
 
-    def __str__(self):
+    def __str__(self) -> str:
         label = dict(self.RecipientType.choices).get(self.recipient_type, "")
         return f"{self.name} ({label})"
 
@@ -121,7 +121,7 @@ class RetentionPeriod(models.Model):
     class Meta:
         ordering = ("duration_label",)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.duration_label
 
 
@@ -165,7 +165,7 @@ class ProcessingActivity(models.Model):
         verbose_name_plural = "Processing activities"
         ordering = ("name",)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
     # --- Risk triage helpers -------------------------------------------------
@@ -191,7 +191,7 @@ class ProcessingActivity(models.Model):
     @property
     def risk_reasons(self) -> list[str]:
         """Short human-readable reasons behind is_high_risk, for display."""
-        reasons = []
+        reasons: list[str] = []
         if not self.involves_sensitive_data:
             return reasons
         if self.legal_basis_id is None:

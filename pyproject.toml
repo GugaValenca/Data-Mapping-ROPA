@@ -32,6 +32,11 @@ select = ["E4", "E7", "E9", "F", "I", "C4", "DTZ", "RUF"]
 plugins = ["mypy_django_plugin.main"]
 python_version = "3.12"
 
+[[tool.mypy.overrides]]
+# Ships no py.typed marker / stubs; not this project's code to fix.
+module = "django_ratelimit.*"
+ignore_missing_imports = true
+
 [tool.django-stubs]
 django_settings_module = "config.settings"
 

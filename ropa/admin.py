@@ -18,7 +18,12 @@ admin.site.index_title = "Manage processing activities & reference data"
 # Wraps the existing admin site's bound login method directly (rather
 # than swapping in a new AdminSite instance) so every @admin.register()
 # call above keeps registering against the same site that urls.py serves.
-admin.site.login = ratelimit(key="ip", rate="5/m", method="POST", block=True)(admin.site.login)
+# mypy sees this as reassigning a method on an instance, which its type
+# model doesn't allow even though Python (and Django's own AdminSite,
+# built to have its attributes overridden this way) allows it fine.
+admin.site.login = ratelimit(  # type: ignore[method-assign]
+    key="ip", rate="5/m", method="POST", block=True
+)(admin.site.login)
 
 
 @admin.register(DataCategory)
@@ -76,13 +81,13 @@ class ProcessingActivityAdmin(admin.ModelAdmin):
     )
 
     @admin.display(boolean=True, description="Sensitive data")
-    def involves_sensitive_data(self, obj):
+    def involves_sensitive_data(self, obj: ProcessingActivity) -> bool:
         return obj.involves_sensitive_data
 
     @admin.display(boolean=True, description="Int'l transfer")
-    def involves_international_transfer(self, obj):
+    def involves_international_transfer(self, obj: ProcessingActivity) -> bool:
         return obj.involves_international_transfer
 
     @admin.display(boolean=True, description="High risk")
-    def is_high_risk(self, obj):
+    def is_high_risk(self, obj: ProcessingActivity) -> bool:
         return obj.is_high_risk
