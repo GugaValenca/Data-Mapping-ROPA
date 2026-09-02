@@ -9,34 +9,30 @@
     <article class="about__card">
         <h2>What this is</h2>
         <p>
-            Data-Mapping-ROPA is a working Record of Processing Activities (ROPA)
-            tool for a fictional mid-size e-commerce company, "NimbusCart." Instead
-            of the industry-standard static spreadsheet or Word document, processing
-            activities are stored as structured, related database records — data
-            categories, legal bases, recipients, and retention periods are all
-            reusable building blocks — and the ROPA report, along with its PDF/CSV
-            exports, is generated automatically from that data.
+            Data-Mapping-ROPA is a database-backed platform for maintaining a
+            Record of Processing Activities (ROPA) — the data map that GDPR
+            Article 30 and equivalent accountability obligations under LGPD
+            require organizations to keep current. Instead of a static
+            spreadsheet or Word document, processing activities are stored as
+            structured, related records — data categories, legal bases,
+            recipients, and retention periods are all reusable building blocks
+            — and the ROPA itself, along with its PDF/CSV exports, is
+            generated automatically from that data on demand.
         </p>
     </article>
 
     <article class="about__card">
-        <h2>Why I built it</h2>
+        <h2>Why it exists</h2>
         <p>
-            I'm a Brazilian-trained lawyer with legal team leadership experience,
-            transitioning into Data Governance &amp; Privacy Analyst work in the US.
-            The ROPA is too often treated as paperwork: a Word document assembled
-            once for an audit and rarely touched again. I wanted to build the
-            alternative: the actual
-            system a privacy team runs on, where adding an activity is a form, not a
-            new spreadsheet row buried in someone's inbox, and where a documentation
-            gap (sensitive data with no defined legal basis or retention period)
-            surfaces on its own instead of waiting to be found during an audit.
-        </p>
-        <p>
-            It's the operational counterpart to a separate project in this
-            portfolio that compares LGPD, GDPR, and CCPA side by side: that one
-            demonstrates the legal-analysis skill, this one demonstrates the
-            "build the tool the team actually runs on" skill.
+            The ROPA is too often treated as paperwork: assembled once for an
+            audit and rarely touched again, hard to query when someone
+            actually needs an answer ("which activities involve a cross-border
+            transfer?", "which ones rely on consent?"). This system treats
+            that data the way an application treats any other structured
+            record — normalized, filterable, exportable in real time — with
+            documentation gaps (sensitive data lacking a defined legal basis
+            or retention period) surfacing automatically instead of waiting
+            to be found during a review.
         </p>
     </article>
 
@@ -51,29 +47,37 @@
     </article>
 
     <article class="about__card">
-        <h2>Tech stack</h2>
-        <p>Django · SQLite (dev) · Django templates + vanilla CSS/JS · ReportLab (PDF) · Python <code>csv</code> module (CSV)</p>
+        <h2>Built with</h2>
+        <p>Django · SQLite (dev) · Django templates + vanilla CSS/JS · ReportLab (PDF) · Python <code>csv</code> module (CSV) · 19 automated tests covering risk triage, filters, and exports</p>
     </article>
 
     <article class="about__card about__card--disclaimer">
         <h2>Scope &amp; disclaimer</h2>
         <p>
-            All company, department, and vendor names are fictional. Legal basis
-            labels are generic categories (Consent, Contract Necessity, Legitimate
-            Interest, Legal Obligation), not legal advice for any specific
-            situation. Retention periods shown are illustrative placeholders
-            pending verification against actual law and are marked as such in the
-            source code — they are not asserted as legally required durations.
+            All company, department, and vendor names in the sample data are
+            fictional. Legal basis labels are generic categories (Consent,
+            Contract Necessity, Legitimate Interest, Legal Obligation), not
+            legal advice for any specific situation. Retention periods shown
+            are illustrative placeholders pending verification against actual
+            law and are marked as such in the source code — they are not
+            asserted as legally required durations.
         </p>
     </article>
 
     <article class="about__card">
-        <h2>Author</h2>
-        <p>Built by Gustavo Valença as part of a 4-project portfolio for a Data Governance &amp; Privacy Analyst career transition.</p>
-        {# TODO: set real hrefs below (LinkedIn, GitHub) before sharing this page publicly. #}
+        <h2>About the author</h2>
+        <p>
+            Gustavo Valença is a Brazilian-trained lawyer with legal team
+            leadership experience, working across Python/Django development
+            and data privacy law (LGPD, GDPR, CCPA). This project reflects
+            that combination directly: the data model encodes privacy-program
+            concepts — legal bases, retention justification, cross-border
+            transfer flags, risk triage — as a structured, tested Django
+            application rather than as a static document.
+        </p>
         <p class="about__links">
-            <a href="#" class="about__link-placeholder">LinkedIn</a>
-            <a href="#" class="about__link-placeholder">GitHub</a>
+            <a href="https://github.com/GugaValenca" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://www.linkedin.com/in/gugavalenca/" target="_blank" rel="noopener">LinkedIn</a>
         </p>
     </article>
 </section>

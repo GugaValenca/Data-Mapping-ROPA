@@ -1,70 +1,87 @@
 # Data-Mapping-ROPA
 
-A database-backed Record of Processing Activities (ROPA) tool, built as
-Project 2 of a portfolio for a transition into Data Governance & Privacy
-Analyst work.
+A database-backed platform for maintaining a Record of Processing
+Activities (ROPA) — the data map that GDPR Article 30 and equivalent
+accountability obligations under LGPD require organizations to keep
+current. Processing activities are entered once as structured, related
+records; the ROPA itself, its filtered views, and its PDF/CSV exports are
+generated from that data on demand, instead of being assembled by hand in
+a spreadsheet or Word document that goes stale the moment it's saved.
 
-## Why this project exists
+## The problem it solves
 
-Most companies maintain their ROPA — the document that maps what personal
-data they process, why, on what legal basis, who they share it with, and
-how long they keep it — as a static Word document or spreadsheet that
-someone updates by hand, if it gets updated at all. That approach doesn't
-scale, is hard to search or filter, and produces a document that's already
-stale by the time an auditor or regulator asks to see it.
+Most ROPAs are static documents: built once for an audit, maintained
+inconsistently afterward, and hard to query when someone actually needs
+an answer — "which activities involve a cross-border transfer?", "which
+ones rely on consent?", "which ones touch sensitive data without a
+documented legal basis?". Answering those from a spreadsheet means
+manually re-reading every row.
 
-This project is the tool a privacy analyst would actually want instead:
-processing activities are entered once as structured, related database
-records, and the ROPA — plus its filtered views and PDF/CSV exports — is
-generated automatically from that data every time it's needed.
-
-It's the operational counterpart to a separate legal-comparison project in
-this portfolio (LGPD/GDPR/CCPA side-by-side): that one shows the legal
-research skill, this one shows the "build the tool the team runs on" skill.
+This system treats that data the way an application treats any other
+structured record: normalized, filterable, and exportable in real time.
+The result is a data map a privacy team can actually query and hand to
+an auditor on demand, with high-risk gaps surfaced automatically instead
+of found during a review.
 
 ## What it does
 
-- **Structured data model**: processing activities are linked to reusable
-  data categories, a legal basis, one or more recipients (internal teams or
-  third parties, flagged for international transfers), and a retention
-  period — instead of free-text fields repeated everywhere.
-- **Django admin as the data-entry tool**: a privacy team maintains records
-  the same way over time, without needing a custom UI just to add a row.
-- **Dashboard**: every processing activity at a glance, in one filterable,
-  searchable table — the "auto-generated ROPA" that replaces the manual
-  spreadsheet.
-- **Filters**: by data category, legal basis, or whether an activity
-  involves an international/cross-border data transfer (relevant under
-  both GDPR and LGPD).
-- **One-click export**: the current (filtered or full) view exports to a
-  ready-to-hand-over PDF or CSV, simulating handing a document to an
-  auditor or regulator on demand.
-- **Automated risk flag**: any activity that combines a sensitive data
-  category with an undefined legal basis and/or retention period is
-  visually flagged — surfacing exactly the kind of documentation gap a
-  real risk assessment needs to catch, not just listing data.
+- **Relational data model** — processing activities link to reusable
+  data categories, a legal basis, one or more recipients (internal teams
+  or third parties, flagged individually for international/cross-border
+  transfer), and a retention period with its business justification,
+  instead of repeating free text across rows.
+- **Admin-driven data entry** — record maintenance happens through
+  Django's built-in admin (custom fieldsets, inline creation of related
+  records, filters), so no bespoke CRUD UI was needed to keep the data
+  current.
+- **Filterable dashboard** — every activity at a glance, filterable by
+  data category, legal basis, or cross-border transfer status, with free
+  text search across name/department/purpose.
+- **One-click export** — the current view (filtered or full) exports to
+  a formatted PDF (ReportLab) or CSV, ready to hand to an auditor or
+  regulator without reformatting anything.
+- **Automated risk triage** — any activity that combines a sensitive
+  data category with an undefined legal basis and/or retention period is
+  flagged automatically. This is the difference between *recording* data
+  processing and actually *assessing* it: the system surfaces exactly
+  the kind of documentation gap a risk assessment needs to catch.
 
-## Tech stack
+## Built with
 
-- **Backend**: Django 5/6, SQLite (development database)
-- **Frontend**: Django templates, plain CSS, a few lines of vanilla JS
-  (no frontend framework — kept intentionally simple)
-- **PDF export**: [ReportLab](https://www.reportlab.com/) (pure Python,
-  no native/GTK dependencies — chosen over WeasyPrint specifically for
-  smooth setup on Windows)
-- **CSV export**: Python's built-in `csv` module
+- **Backend**: Django (models, admin, class-based query filtering, the
+  ORM's `select_related`/`prefetch_related` used to keep the dashboard
+  and exports to a handful of queries regardless of table size)
+- **Frontend**: Django templates, plain CSS (light/dark aware), a few
+  lines of vanilla JS — deliberately no frontend framework, to keep the
+  UI layer as simple as the problem calls for
+- **PDF generation**: [ReportLab](https://www.reportlab.com/) (pure
+  Python — no native/GTK dependency, so the export pipeline runs
+  unmodified on Windows, macOS, and Linux)
+- **CSV export**: Python's standard-library `csv` module
+- **Configuration**: `SECRET_KEY` / `DEBUG` / `ALLOWED_HOSTS` read from
+  environment variables with dev-only fallbacks (`config/settings.py`,
+  `.env.example`) — the codebase is deploy-ready without code changes
 
-## A note on legal content
+## Data privacy & compliance design
 
-All company, department, and vendor names in the seed data are fictional
-(a made-up e-commerce company, "NimbusCart"). Legal basis labels are
+The data model mirrors the fields a ROPA is expected to carry: what data
+is collected, why, on what legal basis, who it's shared with (flagging
+international transfers separately, since GDPR and LGPD both attach
+extra conditions to those), and how long it's retained and why. The
+`is_high_risk` flag operationalizes a basic triage rule — sensitive data
+category **and** (missing legal basis **or** missing retention period) —
+directly in the model, so it's computed consistently everywhere the data
+is displayed or exported rather than re-implemented per view.
+
+**On the sample data**: the seeded processing activities belong to a
+fictional company invented for this project. Legal-basis labels are
 generic categories (Consent, Contract Necessity, Legitimate Interest,
-Legal Obligation), not legal advice for any real situation. Retention
-periods are illustrative placeholders — they are **not** asserted as
-legally required durations. Anywhere a real retention period or legal
-threshold would normally need to come from a specific statute, the code
-carries a `# TODO: VERIFY legal retention standard against official
-source` comment instead of a stated-as-fact number (see
+Legal Obligation), not legal advice for any real situation, and
+retention periods are illustrative placeholders — not asserted as
+legally required durations. Anywhere a real deployment would need an
+actual retention period or legal threshold sourced from statute, the
+code carries a `# TODO: VERIFY legal retention standard against
+official source` comment instead of a stated-as-fact number (see
 `ropa/models.py` and `ropa/management/commands/seed_ropa.py`).
 
 ## Running it locally
@@ -108,6 +125,18 @@ Then visit:
 Re-running `python manage.py seed_ropa` clears and reloads the sample
 data (pass `--keep` to add to existing records instead).
 
+## Testing
+
+```bash
+python manage.py test ropa
+```
+
+19 tests cover the parts most likely to break silently: the risk-triage
+rule (every combination of sensitive/non-sensitive data with a missing
+legal basis and/or retention period), the dashboard's filter and search
+query logic exercised through the real endpoint, and both export
+endpoints producing well-formed, filter-respecting CSV/PDF output.
+
 ## Project structure
 
 ```
@@ -118,6 +147,7 @@ ropa/                           The ROPA app
   admin.py                      Django admin configuration
   views.py                      Dashboard, filters, about, export views
   exports.py                    CSV and PDF export logic
+  tests.py                      Model, view-filter, and export tests
   management/commands/
     seed_ropa.py                 Fictional sample data for NimbusCart
   templates/ropa/                Dashboard, about, and base templates
@@ -138,19 +168,20 @@ static/                          CSS and JS
   `ropa/management/commands/seed_ropa.py`, not in the database file, so
   nothing sensitive is at risk of being committed.
 
-## Deployment (not yet set up)
+## Deployment
 
-For a live demo link on a resume, this app is a good fit for a free-tier
-Django host such as **Render** or **PythonAnywhere** (swap SQLite for
-Render's free Postgres if using Render). Deployment is intentionally not
-configured yet, pending a content review of the seed data and About
-page — see the `# TODO` markers in `ropa/templates/ropa/about.html`.
+Not yet configured. This app is a good fit for a free-tier Django host
+such as **Render** or **PythonAnywhere** (swap SQLite for Render's free
+Postgres if using Render) — no code changes required, just setting the
+environment variables above on the host.
 
-## Author
+## About the author
 
-Built by Gustavo Valença, a Brazilian-trained lawyer with legal team
-leadership experience transitioning into Data Governance & Privacy
-Analyst work in the US, as part of a 4-project portfolio.
+Gustavo Valença is a Brazilian-trained lawyer with legal team leadership
+experience, working across Python/Django development and data privacy
+law (LGPD, GDPR, CCPA). This project reflects that combination directly:
+the data model encodes privacy-program concepts (legal bases, retention
+justification, cross-border transfer flags, risk triage) as a
+structured, tested Django application rather than as a static document.
 
-<!-- TODO: add real LinkedIn/GitHub profile links here before publishing. -->
-LinkedIn · GitHub
+[GitHub](https://github.com/GugaValenca) · [LinkedIn](https://www.linkedin.com/in/gugavalenca/)

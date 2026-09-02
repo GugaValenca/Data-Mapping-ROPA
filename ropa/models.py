@@ -9,9 +9,9 @@ building blocks (categories, legal bases, recipients, retention periods)
 so the same reference data doesn't get retyped for every activity.
 
 IMPORTANT — legal disclaimer for anyone reviewing this code:
-This is a portfolio project built around a fictional e-commerce company.
-Business scenarios, department names, and vendor names are invented for
-demonstration purposes. Retention periods and legal-basis labels are
+This application is built around a fictional e-commerce company for
+demonstration purposes. Business scenarios, department names, and vendor
+names are invented. Retention periods and legal-basis labels are
 illustrative placeholders, NOT legal advice and NOT asserted to be
 correct under GDPR, LGPD, CCPA, or any other law. Anywhere a real
 retention period or legal threshold would need to be sourced from an

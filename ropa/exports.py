@@ -150,9 +150,9 @@ def export_pdf(activities) -> HttpResponse:
     elements.append(Spacer(1, 0.2 * inch))
     elements.append(
         Paragraph(
-            "Fictional company data for portfolio demonstration purposes. "
-            "Retention periods shown are illustrative placeholders pending "
-            "legal verification, not confirmed legal requirements.",
+            "Sample data belongs to a fictional company, for demonstration "
+            "purposes. Retention periods shown are illustrative placeholders "
+            "pending legal verification, not confirmed legal requirements.",
             ParagraphStyle("footnote", parent=styles["Normal"], fontSize=7, textColor=colors.grey),
         )
     )
