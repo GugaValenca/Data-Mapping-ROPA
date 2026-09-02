@@ -67,6 +67,20 @@ else:
 if os.environ.get("VERCEL"):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
+# Belt-and-suspenders production hardening. Vercel already forces HTTPS
+# and sends HSTS/X-Content-Type-Options/X-Frame-Options at the edge for
+# every deployment (verified against the live response headers), so
+# none of this is filling a gap there today — it's here so the app is
+# still correctly configured if it's ever hosted somewhere that doesn't
+# do that for you. `manage.py check --deploy` was used to find this list.
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 365  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
 
 # Application definition
 
@@ -133,7 +147,7 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            "NAME": str(BASE_DIR / "db.sqlite3"),
         }
     }
 
@@ -189,13 +203,3 @@ WHITENOISE_USE_FINDERS = True
 # filenames. Kept as a setting rather than hard-coded so it only needs to
 # change in one place.
 SITE_TITLE = "Data-Mapping-ROPA"
-
-
-# Email
-# https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
-
-MAILERS = {
-    "default": {
-        "BACKEND": "django.core.mail.backends.console.EmailBackend",
-    },
-}
