@@ -1,0 +1,80 @@
+{% extends "ropa/base.html" %}
+
+{% block title %}Data-Mapping-ROPA — About{% endblock %}
+
+{% block content %}
+<section class="about">
+    <h1>About this project</h1>
+
+    <article class="about__card">
+        <h2>What this is</h2>
+        <p>
+            Data-Mapping-ROPA is a working Record of Processing Activities (ROPA)
+            tool for a fictional mid-size e-commerce company, "NimbusCart." Instead
+            of the industry-standard static spreadsheet or Word document, processing
+            activities are stored as structured, related database records — data
+            categories, legal bases, recipients, and retention periods are all
+            reusable building blocks — and the ROPA report, along with its PDF/CSV
+            exports, is generated automatically from that data.
+        </p>
+    </article>
+
+    <article class="about__card">
+        <h2>Why I built it</h2>
+        <p>
+            I'm a Brazilian-trained lawyer with legal team leadership experience,
+            transitioning into Data Governance &amp; Privacy Analyst work in the US.
+            The ROPA is too often treated as paperwork: a Word document assembled
+            once for an audit and rarely touched again. I wanted to build the
+            alternative: the actual
+            system a privacy team runs on, where adding an activity is a form, not a
+            new spreadsheet row buried in someone's inbox, and where a documentation
+            gap (sensitive data with no defined legal basis or retention period)
+            surfaces on its own instead of waiting to be found during an audit.
+        </p>
+        <p>
+            It's the operational counterpart to a separate project in this
+            portfolio that compares LGPD, GDPR, and CCPA side by side: that one
+            demonstrates the legal-analysis skill, this one demonstrates the
+            "build the tool the team actually runs on" skill.
+        </p>
+    </article>
+
+    <article class="about__card">
+        <h2>How it works</h2>
+        <ul class="about__list">
+            <li>Privacy/compliance staff maintain activities through Django admin, the same way a real team would update records over time.</li>
+            <li>The dashboard renders the current ROPA as a filterable, searchable table — by data category, legal basis, or cross-border transfer.</li>
+            <li>Any activity combining a sensitive data category with an undefined legal basis or retention period is flagged automatically.</li>
+            <li>The full (or filtered) ROPA can be exported as a ready-to-hand-over PDF or CSV at any time.</li>
+        </ul>
+    </article>
+
+    <article class="about__card">
+        <h2>Tech stack</h2>
+        <p>Django · SQLite (dev) · Django templates + vanilla CSS/JS · ReportLab (PDF) · Python <code>csv</code> module (CSV)</p>
+    </article>
+
+    <article class="about__card about__card--disclaimer">
+        <h2>Scope &amp; disclaimer</h2>
+        <p>
+            All company, department, and vendor names are fictional. Legal basis
+            labels are generic categories (Consent, Contract Necessity, Legitimate
+            Interest, Legal Obligation), not legal advice for any specific
+            situation. Retention periods shown are illustrative placeholders
+            pending verification against actual law and are marked as such in the
+            source code — they are not asserted as legally required durations.
+        </p>
+    </article>
+
+    <article class="about__card">
+        <h2>Author</h2>
+        <p>Built by Gustavo Valença as part of a 4-project portfolio for a Data Governance &amp; Privacy Analyst career transition.</p>
+        {# TODO: set real hrefs below (LinkedIn, GitHub) before sharing this page publicly. #}
+        <p class="about__links">
+            <a href="#" class="about__link-placeholder">LinkedIn</a>
+            <a href="#" class="about__link-placeholder">GitHub</a>
+        </p>
+    </article>
+</section>
+{% endblock %}

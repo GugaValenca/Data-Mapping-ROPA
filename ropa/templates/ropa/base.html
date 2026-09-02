@@ -1,0 +1,35 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Data-Mapping-ROPA{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <header class="site-header">
+        <div class="site-header__inner">
+            <a class="site-header__brand" href="{% url 'ropa:dashboard' %}">
+                <span class="site-header__logo" aria-hidden="true">◈</span>
+                Data-Mapping-ROPA
+            </a>
+            <nav class="site-header__nav">
+                <a href="{% url 'ropa:dashboard' %}">Dashboard</a>
+                <a href="{% url 'ropa:about' %}">About</a>
+                <a href="/admin/" target="_blank" rel="noopener">Admin</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="page">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <p>
+            Data-Mapping-ROPA &mdash; a portfolio demonstration built with fictional company data.
+            Not legal advice; see the <a href="{% url 'ropa:about' %}">About</a> page.
+        </p>
+    </footer>
+</body>
+</html>

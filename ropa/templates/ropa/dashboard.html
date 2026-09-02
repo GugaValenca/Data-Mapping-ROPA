@@ -1,0 +1,157 @@
+{% extends "ropa/base.html" %}
+{% load static %}
+
+{% block title %}Data-Mapping-ROPA — Dashboard{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <h1>Record of Processing Activities</h1>
+        <p class="page-header__subtitle">
+            The auto-generated ROPA for NimbusCart (fictional e-commerce company) &mdash;
+            filter, search, and export on demand instead of maintaining a static spreadsheet.
+        </p>
+    </div>
+    <div class="stat-row">
+        <div class="stat-card">
+            <span class="stat-card__value">{{ total_count }}</span>
+            <span class="stat-card__label">Activities shown</span>
+        </div>
+        <div class="stat-card stat-card--risk">
+            <span class="stat-card__value">{{ high_risk_count }}</span>
+            <span class="stat-card__label">High-risk flags</span>
+        </div>
+    </div>
+</section>
+
+<section class="filter-bar">
+    <form method="get" class="filter-form" id="filter-form">
+        <div class="filter-form__field">
+            <label for="q">Search</label>
+            <input type="text" id="q" name="q" value="{{ query }}" placeholder="Activity, department, purpose…">
+        </div>
+        <div class="filter-form__field">
+            <label for="data_category">Data category</label>
+            <select id="data_category" name="data_category">
+                <option value="">All categories</option>
+                {% for category in data_categories %}
+                <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"s" %}selected{% endif %}>
+                    {{ category.name }}{% if category.is_sensitive %} ⚠{% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-form__field">
+            <label for="legal_basis">Legal basis</label>
+            <select id="legal_basis" name="legal_basis">
+                <option value="">All legal bases</option>
+                {% for basis in legal_bases %}
+                <option value="{{ basis.id }}" {% if selected_legal_basis == basis.id|stringformat:"s" %}selected{% endif %}>
+                    {{ basis.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-form__field">
+            <label for="international">Cross-border transfer</label>
+            <select id="international" name="international">
+                <option value="">Any</option>
+                {% for value, label in international_choices %}
+                <option value="{{ value }}" {% if selected_international == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-form__actions">
+            <button type="submit" class="btn btn--primary">Apply filters</button>
+            {% if filters_active %}
+            <a href="{% url 'ropa:dashboard' %}" class="btn btn--ghost">Clear</a>
+            {% endif %}
+        </div>
+    </form>
+
+    <div class="export-actions">
+        <span class="export-actions__label">
+            {% if filters_active %}Export filtered results:{% else %}Export full ROPA:{% endif %}
+        </span>
+        <a class="btn btn--export" href="{% url 'ropa:export_pdf' %}?{{ request.GET.urlencode }}">⬇ PDF</a>
+        <a class="btn btn--export" href="{% url 'ropa:export_csv' %}?{{ request.GET.urlencode }}">⬇ CSV</a>
+    </div>
+</section>
+
+<section class="table-wrap">
+    <table class="ropa-table">
+        <thead>
+            <tr>
+                <th>Activity</th>
+                <th>Department</th>
+                <th>Purpose</th>
+                <th>Data categories</th>
+                <th>Legal basis</th>
+                <th>Recipients</th>
+                <th>Transfer</th>
+                <th>Retention</th>
+                <th>Risk</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for activity in activities %}
+            <tr class="{% if activity.is_high_risk %}row--high-risk{% endif %}">
+                <td class="cell-primary">{{ activity.name }}</td>
+                <td>{{ activity.department }}</td>
+                <td class="cell-wrap">{{ activity.purpose }}</td>
+                <td class="cell-wrap">
+                    {% for category in activity.data_categories.all %}
+                    <span class="badge {% if category.is_sensitive %}badge--sensitive{% else %}badge--neutral{% endif %}">
+                        {{ category.name }}
+                    </span>
+                    {% endfor %}
+                </td>
+                <td>
+                    {% if activity.legal_basis %}
+                        {{ activity.legal_basis.name }}
+                    {% else %}
+                        <span class="badge badge--missing">Undefined</span>
+                    {% endif %}
+                </td>
+                <td class="cell-wrap">
+                    {% for recipient in activity.recipients.all %}
+                    <span class="badge {% if recipient.is_international_transfer %}badge--transfer{% else %}badge--neutral{% endif %}">
+                        {{ recipient.name }}
+                    </span>
+                    {% empty %}
+                    <span class="muted">—</span>
+                    {% endfor %}
+                </td>
+                <td>
+                    {% if activity.involves_international_transfer %}
+                        <span class="badge badge--transfer">Cross-border</span>
+                    {% else %}
+                        <span class="muted">Domestic</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if activity.retention_period %}
+                        {{ activity.retention_period.duration_label }}
+                    {% else %}
+                        <span class="badge badge--missing">Undefined</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if activity.is_high_risk %}
+                    <span class="badge badge--risk" title="{{ activity.risk_reasons|join:'; ' }}">⚠ High risk</span>
+                    {% else %}
+                    <span class="badge badge--ok">OK</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="9" class="empty-state">No processing activities match these filters.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<script src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}
