@@ -59,6 +59,14 @@ body {
 a { color: var(--brand-accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+/* Keyboard-focus ring, styled to match the design system instead of
+   falling back to the browser default (which reads poorly against the
+   dark header) - never suppressed, just made consistent. */
+:focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: 2px;
+}
+
 .site-header {
     background: var(--brand);
     border-bottom: 1px solid var(--border);
