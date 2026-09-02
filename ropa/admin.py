@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django_ratelimit.decorators import ratelimit
 
 from .models import (
     DataCategory,
@@ -11,6 +12,15 @@ from .models import (
 admin.site.site_header = "Data-Mapping-ROPA Administration"
 admin.site.site_title = "Data-Mapping-ROPA Admin"
 admin.site.index_title = "Manage processing activities & reference data"
+
+# The login form is the one publicly reachable, unauthenticated endpoint
+# in this app, so it's the one worth rate limiting against brute force.
+# Wraps the existing admin site's bound login method directly (rather
+# than swapping in a new AdminSite instance) so every @admin.register()
+# call above keeps registering against the same site that urls.py serves.
+admin.site.login = ratelimit(key="ip", rate="5/m", method="POST", block=True)(
+    admin.site.login
+)
 
 
 @admin.register(DataCategory)
