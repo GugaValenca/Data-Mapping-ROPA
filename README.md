@@ -1,5 +1,9 @@
 # Data-Mapping-ROPA
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-data--mapping--ropa.vercel.app-000000?style=flat&logo=vercel&logoColor=white)](https://data-mapping-ropa.vercel.app)
+[![GitHub](https://img.shields.io/badge/GitHub-GugaValenca-181717?style=flat&logo=github&logoColor=white)](https://github.com/GugaValenca)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-gugavalenca-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/gugavalenca/)
+
 A database-backed platform for maintaining a Record of Processing
 Activities (ROPA) — the data map that GDPR Article 30 and equivalent
 accountability obligations under LGPD require organizations to keep
@@ -222,4 +226,5 @@ the data model encodes privacy-program concepts (legal bases, retention
 justification, cross-border transfer flags, risk triage) as a
 structured, tested Django application rather than as a static document.
 
-[GitHub](https://github.com/GugaValenca) · [LinkedIn](https://www.linkedin.com/in/gugavalenca/)
+[![GitHub](https://img.shields.io/badge/GitHub-GugaValenca-181717?style=flat&logo=github&logoColor=white)](https://github.com/GugaValenca)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-gugavalenca-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/gugavalenca/)
