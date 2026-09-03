@@ -1,3 +1,22 @@
+# This [project] table exists only so Vercel's build (which runs `uv lock`
+# the moment any pyproject.toml is present, regardless of why it's there)
+# has a valid PEP 621 project to resolve. requirements.txt stays the
+# source of truth for local dev and any pip-based host - keep this list
+# in sync with it by hand; there are few enough dependencies that a
+# drift here would show up immediately as a build failure, not silently.
+[project]
+name = "data-mapping-ropa"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "Django>=5.0,<7.0",
+    "reportlab>=4.0",
+    "django-ratelimit>=4.1",
+    "dj-database-url>=2.1",
+    "psycopg[binary]>=3.1",
+    "whitenoise>=6.6",
+]
+
 [tool.black]
 line-length = 96
 target-version = ["py312"]
