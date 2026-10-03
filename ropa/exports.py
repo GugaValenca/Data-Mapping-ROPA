@@ -52,14 +52,19 @@ def _row_for(activity: ProcessingActivity) -> list[str]:
 
 def export_csv(activities) -> HttpResponse:
     response = HttpResponse(content_type="text/csv")
-    timestamp = timezone.now().strftime("%Y%m%d")
+    # Single timestamp, reused for both the filename and the "Generated"
+    # row — matches export_pdf's pattern below, and avoids the filename
+    # date and the displayed date disagreeing on the (vanishingly rare,
+    # but free to just not have) chance a request straddles midnight.
+    generated_at = timezone.now()
+    timestamp = generated_at.strftime("%Y%m%d")
     response["Content-Disposition"] = (
         f'attachment; filename="{EXPORT_BASENAME}-{timestamp}.csv"'
     )
 
     writer = csv.writer(response)
     writer.writerow([f"{settings.SITE_TITLE} — Record of Processing Activities"])
-    writer.writerow([f"Generated {timezone.now().strftime('%Y-%m-%d %H:%M')}"])
+    writer.writerow([f"Generated {generated_at.strftime('%Y-%m-%d %H:%M')}"])
     writer.writerow([])
     writer.writerow(COLUMN_HEADERS)
     for activity in activities:

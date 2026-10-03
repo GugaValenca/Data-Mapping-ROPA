@@ -5,12 +5,22 @@
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-gugavalenca-0A66C2?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/gugavalenca/)
 
 A database-backed platform for maintaining a Record of Processing
-Activities (ROPA) — the data map that GDPR Article 30 and equivalent
-accountability obligations under LGPD require organizations to keep
-current. Processing activities are entered once as structured, related
-records; the ROPA itself, its filtered views, and its PDF/CSV exports are
-generated from that data on demand, instead of being assembled by hand in
-a spreadsheet or Word document that goes stale the moment it's saved.
+Activities (ROPA) — the data map that GDPR Article 30 ("Records of
+processing activities") and LGPD Article 37 (the equivalent obligation to
+keep a record of personal data processing operations) require
+organizations to keep current.<sup>[1]</sup> Processing activities are
+entered once as structured, related records; the ROPA itself, its
+filtered views, and its PDF/CSV exports are generated from that data on
+demand, instead of being assembled by hand in a spreadsheet or Word
+document that goes stale the moment it's saved.
+
+<sub>[1] Verified against primary sources on October 2, 2026: GDPR Art. 30
+at [eur-lex.europa.eu, Regulation (EU) 2016/679](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=celex%3A32016R0679)
+(mirrored for readability at [gdpr-info.eu/art-30-gdpr](https://gdpr-info.eu/art-30-gdpr/));
+LGPD Art. 37 at [planalto.gov.br, Lei 13.709/2018](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm).
+This citation is to the two articles' general subject matter only — it is
+not a claim that this tool's output satisfies either article's specific
+content requirements for a real organization.</sub>
 
 ![Dashboard: a filterable table of processing activities, two flagged high-risk in red, with PDF/CSV export buttons](docs/dashboard.png)
 
@@ -180,6 +190,17 @@ static/                          CSS and JS
 - `db.sqlite3` is git-ignored. Sample/seed data lives in
   `ropa/management/commands/seed_ropa.py`, not in the database file, so
   nothing sensitive is at risk of being committed.
+- Because `DJANGO_DEBUG=False` with no `DJANGO_SECRET_KEY` set would
+  otherwise silently serve production traffic signed with the public,
+  repo-visible dev-only key, `config/settings.py` refuses to start in
+  that combination (raises `ImproperlyConfigured` instead).
+- The CSV/PDF exports and admin login all accept requests from anonymous
+  visitors, so each is rate-limited per visitor (`ropa/views.py`,
+  `ropa/admin.py`) — 10/min for exports (PDF generation isn't free),
+  5/min for admin login attempts. The limiter key trusts Vercel's
+  `X-Real-IP` header only when actually running on Vercel
+  (`RUNNING_ON_VERCEL`, `ropa/throttling.py`); elsewhere a client could
+  set that header to anything, so `REMOTE_ADDR` is used instead.
 
 ## Deployment (Vercel)
 
@@ -210,6 +231,7 @@ there, so production needs a real Postgres database.
    this for you):
    ```bash
    DATABASE_URL="<value from Vercel's Storage tab>" python manage.py migrate
+   DATABASE_URL="<same value>" python manage.py createcachetable   # rate-limit counters
    DATABASE_URL="<same value>" python manage.py seed_ropa   # optional, sample data
    DATABASE_URL="<same value>" python manage.py createsuperuser
    ```

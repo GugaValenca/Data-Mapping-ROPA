@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.db.models import QuerySet
+from django.http import HttpRequest
 from django_ratelimit.decorators import ratelimit
 
 from .models import (
@@ -8,6 +10,7 @@ from .models import (
     ProcessingActivity,
     RetentionPeriod,
 )
+from .throttling import client_ip
 
 admin.site.site_header = "Data-Mapping-ROPA Administration"
 admin.site.site_title = "Data-Mapping-ROPA Admin"
@@ -18,11 +21,15 @@ admin.site.index_title = "Manage processing activities & reference data"
 # Wraps the existing admin site's bound login method directly (rather
 # than swapping in a new AdminSite instance) so every @admin.register()
 # call above keeps registering against the same site that urls.py serves.
+# Keyed by client_ip rather than django-ratelimit's built-in "ip" key: on
+# Vercel, REMOTE_ADDR is the platform's proxy, not the visitor, so the
+# built-in key would put every visitor's login attempts in one shared
+# budget instead of one budget per visitor (see ropa/throttling.py).
 # mypy sees this as reassigning a method on an instance, which its type
 # model doesn't allow even though Python (and Django's own AdminSite,
 # built to have its attributes overridden this way) allows it fine.
 admin.site.login = ratelimit(  # type: ignore[method-assign]
-    key="ip", rate="5/m", method="POST", block=True
+    key=client_ip, rate="5/m", method="POST", block=True
 )(admin.site.login)
 
 
@@ -79,6 +86,19 @@ class ProcessingActivityAdmin(admin.ModelAdmin):
             {"fields": ("data_categories", "legal_basis", "recipients", "retention_period")},
         ),
     )
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[ProcessingActivity]:
+        # The three boolean columns below each read data_categories and/or
+        # recipients per row via the model properties they proxy — without
+        # this, the changelist page runs two extra queries per row (an N+1
+        # that's invisible in this demo's small seed data but would scale
+        # badly on a real ROPA with hundreds of activities).
+        return (
+            super()
+            .get_queryset(request)
+            .prefetch_related("data_categories", "recipients")
+            .select_related("legal_basis", "retention_period")
+        )
 
     @admin.display(boolean=True, description="Sensitive data")
     def involves_sensitive_data(self, obj: ProcessingActivity) -> bool:

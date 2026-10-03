@@ -7,6 +7,9 @@ env/
 *.egg-info/
 .DS_Store
 .env
+# Also covers .env.production.local / .env.preview.local, the filenames
+# `vercel env pull --environment=<env>` writes.
+.env*.local
 staticfiles/
 
 .vercel

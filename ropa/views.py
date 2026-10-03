@@ -3,14 +3,22 @@ from dataclasses import dataclass
 from django.db.models import Q, QuerySet
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
+from django_ratelimit.decorators import ratelimit
 
 from . import exports
 from .models import DataCategory, LegalBasis, ProcessingActivity
+from .throttling import client_ip
 
 INTERNATIONAL_CHOICES = (
     ("yes", "Yes — international transfer"),
     ("no", "No — domestic only"),
 )
+
+# Both exports are public, unauthenticated, and re-render every matching
+# activity from scratch (PDF generation in particular isn't free), so each
+# is rate-limited per visitor rather than left open to unlimited requests.
+EXPORT_RATE = "10/m"
+limit_export = ratelimit(group="export", key=client_ip, rate=EXPORT_RATE, block=True)
 
 
 @dataclass(frozen=True)
@@ -103,9 +111,11 @@ def about(request: HttpRequest) -> HttpResponse:
     return render(request, "ropa/about.html")
 
 
+@limit_export
 def export_csv(request: HttpRequest) -> HttpResponse:
     return exports.export_csv(_filtered_activities(_parse_filters(request)))
 
 
+@limit_export
 def export_pdf(request: HttpRequest) -> HttpResponse:
     return exports.export_pdf(_filtered_activities(_parse_filters(request)))

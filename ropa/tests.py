@@ -8,9 +8,17 @@ actually producing well-formed CSV/PDF output.
 
 import csv
 import io
+import os
+import subprocess
+import sys
+from pathlib import Path
 
 from django.contrib import admin
-from django.test import Client, TestCase
+from django.core.cache import cache
+from django.db import connection
+from django.test import Client
+from django.test import TestCase as DjangoTestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from pypdf import PdfReader
 
@@ -22,6 +30,17 @@ from .models import (
     ProcessingActivity,
     RetentionPeriod,
 )
+from .throttling import client_ip
+
+
+class TestCase(DjangoTestCase):
+    """Clears the cache before every test: the rate limiter counts requests
+    there, and the suite as a whole makes more requests to a rate-limited
+    view than one visitor may per minute."""
+
+    def setUp(self):
+        super().setUp()
+        cache.clear()
 
 
 def make_activity(
@@ -317,3 +336,130 @@ class AdminDisplayMethodTests(TestCase):
         self.assertFalse(self.model_admin.involves_sensitive_data(activity))
         self.assertFalse(self.model_admin.involves_international_transfer(activity))
         self.assertFalse(self.model_admin.is_high_risk(activity))
+
+
+class DashboardQueryCountTests(TestCase):
+    """`involves_sensitive_data`/`involves_international_transfer` must read
+    from the dashboard's prefetch_related cache instead of issuing their own
+    query per activity. Using `.filter()` instead of `.all()` on a prefetched
+    related manager silently bypasses the cache and re-hits the database once
+    per activity per property — an N+1 that's invisible with a handful of
+    seed rows but would scale badly on a real ROPA. This pins query count flat
+    as the row count grows, so that regression can't creep back in unnoticed."""
+
+    def setUp(self):
+        self.sensitive = DataCategory.objects.create(name="Health Data", is_sensitive=True)
+        self.overseas = DataRecipient.objects.create(
+            name="Overseas Vendor", is_international_transfer=True
+        )
+
+    def _make_activities(self, start, count):
+        for i in range(start, start + count):
+            make_activity(
+                name=f"Activity {i}",
+                categories=[self.sensitive],
+                recipients=[self.overseas],
+            )
+
+    def test_query_count_does_not_grow_with_activity_count(self):
+        self._make_activities(0, 3)
+        with CaptureQueriesContext(connection) as few:
+            response = self.client.get(reverse("ropa:dashboard"))
+        self.assertEqual(response.status_code, 200)
+
+        self._make_activities(3, 10)
+        with CaptureQueriesContext(connection) as many:
+            response = self.client.get(reverse("ropa:dashboard"))
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(
+            len(few.captured_queries),
+            len(many.captured_queries),
+            "Dashboard query count grew with activity count — the "
+            "involves_sensitive_data/involves_international_transfer "
+            "properties are likely bypassing the prefetch_related cache "
+            "again (e.g. by calling .filter() instead of .all()).",
+        )
+
+
+class SecretKeyGuardTests(TestCase):
+    """config.settings refuses to start with DEBUG off while still on the
+    throwaway dev-only SECRET_KEY, instead of silently serving production
+    traffic signed with a secret key that's sitting in public source
+    control. Settings are evaluated at import time, so this has to run
+    `manage.py check` in a subprocess rather than mutating `django.conf.settings`."""
+
+    def _run_manage_check(self, *, debug, secret_key=None):
+        env = dict(os.environ)
+        env["DJANGO_DEBUG"] = debug
+        if secret_key is None:
+            env.pop("DJANGO_SECRET_KEY", None)
+        else:
+            env["DJANGO_SECRET_KEY"] = secret_key
+        project_root = Path(__file__).resolve().parent.parent
+        return subprocess.run(
+            [sys.executable, "manage.py", "check"],
+            cwd=project_root,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+    def test_debug_false_without_real_secret_key_refuses_to_start(self):
+        result = self._run_manage_check(debug="False")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("ImproperlyConfigured", result.stderr)
+
+    def test_debug_false_with_real_secret_key_starts_fine(self):
+        result = self._run_manage_check(
+            debug="False", secret_key="a-real-generated-secret-key-value-thats-long-enough"
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_debug_true_without_secret_key_starts_fine_for_local_dev(self):
+        result = self._run_manage_check(debug="True")
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+
+class RateLimitTests(TestCase):
+    def test_csv_exports_are_limited_per_visitor(self):
+        url = reverse("ropa:export_csv")
+        statuses = [self.client.get(url).status_code for _ in range(11)]
+        self.assertEqual(statuses[:10], [200] * 10)
+        self.assertEqual(statuses[10], 403)
+
+    def test_pdf_exports_are_limited_per_visitor(self):
+        url = reverse("ropa:export_pdf")
+        statuses = [self.client.get(url).status_code for _ in range(11)]
+        self.assertEqual(statuses[:10], [200] * 10)
+        self.assertEqual(statuses[10], 403)
+
+    def test_admin_login_attempts_are_limited_per_visitor(self):
+        url = reverse("admin:login")
+        data = {"username": "nobody", "password": "wrong"}
+        statuses = [self.client.post(url, data).status_code for _ in range(6)]
+        self.assertEqual(statuses[:5], [200] * 5)
+        self.assertEqual(statuses[5], 403)
+
+
+class ClientIpTests(TestCase):
+    """The rate-limit key trusts X-Real-IP only where the platform
+    guarantees it (Vercel); elsewhere it could be forged to dodge limits."""
+
+    def request(self, **meta):
+        from django.test import RequestFactory
+
+        return RequestFactory().get("/", REMOTE_ADDR="10.0.0.1", **meta)
+
+    def test_header_is_ignored_off_vercel(self):
+        with self.settings(RUNNING_ON_VERCEL=False):
+            self.assertEqual(client_ip("g", self.request(HTTP_X_REAL_IP="1.2.3.4")), "10.0.0.1")
+
+    def test_header_is_used_on_vercel(self):
+        with self.settings(RUNNING_ON_VERCEL=True):
+            self.assertEqual(client_ip("g", self.request(HTTP_X_REAL_IP="1.2.3.4")), "1.2.3.4")
+
+    def test_falls_back_to_remote_addr_on_vercel_without_header(self):
+        with self.settings(RUNNING_ON_VERCEL=True):
+            self.assertEqual(client_ip("g", self.request()), "10.0.0.1")

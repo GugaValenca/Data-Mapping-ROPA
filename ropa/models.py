@@ -109,7 +109,13 @@ class RetentionPeriod(models.Model):
     must be checked against the actual statute, regulation, or regulator
     guidance that applies (e.g. tax record-keeping law, GDPR storage
     limitation guidance, LGPD Art. 15/16 deletion triggers, CCPA/CPRA
-    retention disclosure rules) and updated accordingly.
+    retention disclosure rules) and updated accordingly. (The LGPD Art.
+    15/16 reference itself — Art. 15 lists when processing must end, Art.
+    16 governs elimination of data afterward and the narrow exceptions
+    that allow continued retention — was confirmed against
+    planalto.gov.br, Lei 13.709/2018, on October 2, 2026; it names where
+    to look, it does not assert what any given retention period in this
+    tool's seed data should be.)
     """
 
     duration_label = models.CharField(
@@ -172,11 +178,18 @@ class ProcessingActivity(models.Model):
 
     @property
     def involves_sensitive_data(self) -> bool:
-        return self.data_categories.filter(is_sensitive=True).exists()
+        # `.all()` (not `.filter()`) deliberately: callers that already
+        # prefetch_related("data_categories") — the dashboard, both
+        # exports — get this for free from the prefetch cache. Calling
+        # `.filter()` here would build a fresh queryset instead, silently
+        # bypassing that cache and re-hitting the database once per
+        # activity (an easy-to-miss N+1 that prefetch_related alone
+        # doesn't protect against).
+        return any(category.is_sensitive for category in self.data_categories.all())
 
     @property
     def involves_international_transfer(self) -> bool:
-        return self.recipients.filter(is_international_transfer=True).exists()
+        return any(recipient.is_international_transfer for recipient in self.recipients.all())
 
     @property
     def is_high_risk(self) -> bool:
